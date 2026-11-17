@@ -45,10 +45,21 @@ USER_EMAIL=$(databricks current-user me -p "$PROFILE" -o json | python3 -c 'impo
 HOST=$(databricks auth describe -p "$PROFILE" -o json | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("details",{}).get("host") or d.get("host"))')
 echo "Logged in as $USER_EMAIL on $HOST"
 
+# The VS Code Databricks extension needs workspace.host in the bundle ("Invalid host name" otherwise).
+# Keep it in a git-ignored file that databricks.yml includes, so the public repo has no host.
+cat > databricks.local.yml <<EOF
+# Machine-specific bundle settings, git-ignored. Written by setup.sh.
+targets:
+  dev:
+    workspace:
+      host: ${HOST%/}
+EOF
+echo "Wrote databricks.local.yml (workspace host for the bundle and VS Code extension)"
+
 # ---------------------------------------------------------------- 3. local venv
 say "Local Python environment (.venv, Python 3.12 = serverless env v6)"
 [ -d .venv ] || uv venv .venv --python 3.12
-uv pip install --python .venv -q pip nbformat ipykernel pyyaml databricks-connect \
+uv pip install --python .venv -q pip nbformat ipykernel pyyaml "databricks-connect~=19.1.0" \
   "mlflow==3.16.1" "databricks-sdk==0.145.0" "databricks-agents==1.12.0" "databricks-openai==0.17.1" \
   "databricks-langchain==0.20.0" "databricks-mcp==0.9.2" "databricks-ai-search==0.78" \
   "openai-agents==0.22.3" "langgraph==1.2.12" "dspy==3.4.0" "unitycatalog-ai[databricks]==0.3.2" \

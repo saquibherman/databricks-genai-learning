@@ -1,6 +1,9 @@
 bundle:
   name: genai-course
 
+include:
+  - databricks.local*.yml
+
 sync:
   # Course folders are synced to the workspace (week*/ is not git-ignored here,
   # but keep this so generated files under week*/ still reach the workspace).
