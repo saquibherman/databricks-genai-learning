@@ -1,0 +1,59 @@
+# ============================================================
+# Course Setup Configuration (see Includes/_lib/setup_orchestrator.py)
+# Sections left out are skipped.
+# ============================================================
+
+# Set to true for development (enables manifest validation + cleanup)
+dev_mode: false
+
+# Set to true to drop the catalog after setup (requires dev_mode: true)
+resource_cleanup: false
+
+# Course name — must match the 'course' field in manifest.yaml
+course_name: "GenAI Agent Evaluation on Databricks"
+
+# Serverless compute version check (remove to skip check)
+serverless_compute_version: "6"
+
+# Learner catalog: labuser_<user> (non-Vocareum) or the Vocareum user catalog.
+# The shared agent, its tools and data, and the model services live in
+# workspace.agent_eval (created by Workspace-Setup).
+catalog:
+  name: "workspace"   # this repo: use the existing default catalog instead of auto-creating labuser_<user>
+  prefix: "labuser"
+  schema_name: "demo_agent_eval"
+  volume_name: "agent_vol"
+  volume_sources:
+    - "evaluation_datasets"
+
+# Used by: 2.7_Lab_Applying_Agent_Evaluation
+#
+# Registers the learner's own NYC taxi agent (Includes/agents/nyc_taxi_agent.py)
+# as <catalog>.demo_agent_eval.nyc_taxi@champion, with its tools from
+# Includes/agent tools/nyc_taxi/. The agent calls the shared agent model service.
+# Learners re-register it with a new system prompt during the lab.
+agents:
+  llm_endpoint_name: "workspace.agent_eval.agent-model"
+  alias: "champion"
+
+# The learner's lab experiment: /Users/<user>/eval_lab_experiment
+mlflow:
+  experiment_name: "eval_lab_experiment"
+
+# Judge models: Unity Gateway model services in workspace.agent_eval (created by
+# Workspace-Setup). Not read by _lib; the Classroom-Setup notebooks read this section.
+judges:
+  correctness: "databricks:/workspace.agent_eval.judge-model"
+  safety: "databricks:/workspace.agent_eval.judge-model"
+  guidelines: "databricks:/workspace.agent_eval.judge-model"
+  custom: "databricks:/workspace.agent_eval.custom-judge-model"
+
+libraries:
+  groups:
+    - pyyaml
+    - databricks-sdk
+    - databricks-openai
+    - databricks-mcp
+    - nest-asyncio
+    - databricks-agents
+    - mlflow

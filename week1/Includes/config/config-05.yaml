@@ -1,0 +1,35 @@
+# Demo Setup Configuration
+
+# Set to true if developing a Medallion Lab
+medallion_lab: false
+
+# Set to true for development
+dev_mode: false
+
+# Set to true to drop the catalog after setup (dev_mode must be enabled)
+resource_cleanup: false
+
+# Set Course Name — must match the lab 'name' field in manifest.yaml
+course_name: ""
+
+# Compute check for correct serverless version
+serverless_compute_version: "6"
+
+# Catalog and Schema
+catalog:
+  name: "workspace"   # this repo: use the existing default catalog (course default: null = auto-create labuser_<user>)
+  prefix: "labuser"   # Used when auto-creating a catalog outside Vocareum
+  schema_name: "rag_schema"
+
+# Same Airbnb PDFs as lesson 02, so this lesson also runs on its own
+volume_copy:
+  source_volume: "./Includes/data/rag_all"   # this repo: PDFs ship with the course (Academy labs: /Volumes/dbacademy/rag_all/vol_all)
+  items:
+    - source: "listings"
+      dest_volume: "listings_vol"              # → /Volumes/{catalog}/rag_schema/listings_vol/listings/
+    - source: "additional_listing_info"
+      dest_volume: "house_rules_vol"           # → /Volumes/{catalog}/rag_schema/house_rules_vol/additional_listing_info/
+
+libraries:
+  groups:
+    - pyyaml

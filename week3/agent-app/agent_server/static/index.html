@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Airbnb Assistant</title>
+  <style>
+    :root {
+      --dark: #0b2026; --teal: #1B5162; --muted: #618794; --coral: #FF5F46;
+      --green: #00A972; --off-white: #F9F7F4; --light: #EEEDE9; --blue: #2272B4;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 15px;
+           color: var(--dark); background: var(--light); height: 100vh; display: flex; flex-direction: column; }
+    header { background: var(--teal); color: #fff; padding: 14px 24px; }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 4px 0 0; font-size: 14px; opacity: 0.85; }
+    #info-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 24px; background: #fff; border-bottom: 1px solid #DCE0E2; }
+    .info-pill { font-size: 14px; color: var(--dark); background: var(--off-white); border: 1px solid #DCE0E2; border-radius: 6px; padding: 4px 10px; }
+    .info-pill .label { color: var(--muted); }
+    .mlflow-btn { font-size: 14px; font-weight: 600; color: #fff; background: var(--teal); border-radius: 6px; padding: 5px 12px; text-decoration: none; }
+    .mlflow-btn:hover { background: var(--dark); }
+    [hidden] { display: none !important; }
+    #chat { flex: 1; overflow-y: auto; padding: 24px; max-width: 900px; width: 100%; margin: 0 auto; }
+    .msg { display: flex; margin-bottom: 14px; }
+    .msg.user { justify-content: flex-end; }
+    .bubble { max-width: 75%; padding: 12px 16px; border-radius: 10px; line-height: 1.5;
+              box-shadow: 0 2px 8px rgba(27,49,57,0.06); }
+    .user .bubble { background: var(--teal); color: #fff; }
+    .agent .bubble { background: var(--off-white); }
+    .agent .bubble p { margin: 0 0 8px; }
+    .agent .bubble p:last-child { margin-bottom: 0; }
+    .agent .bubble ul { margin: 0 0 8px; padding-left: 20px; }
+    .tools { margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .tool { font-size: 14px; background: rgba(66,153,224,0.12); color: var(--blue);
+            border-radius: 6px; padding: 2px 8px; font-family: monospace; }
+    .error .bubble { background: #FFF6F4; border: 1px solid var(--coral); }
+    .thinking { color: var(--muted); font-style: italic; }
+    .feedback { margin-top: 10px; padding-top: 8px; border-top: 1px solid #DCE0E2; font-size: 14px; color: var(--muted); }
+    .feedback .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .feedback button { font: inherit; font-size: 14px; border: 1px solid #C4CCD6; background: #fff; border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+    .feedback button.choice { display: inline-flex; align-items: center; gap: 5px; }
+    .feedback button.choice svg { width: 15px; height: 15px; }
+    .feedback button.selected { border-color: var(--teal); background: var(--teal); color: #fff; }
+    .feedback input { flex: 1; min-width: 200px; font: inherit; font-size: 14px; padding: 4px 8px; border: 1px solid #C4CCD6; border-radius: 6px; }
+    .feedback .trace-id { font-family: monospace; font-size: 13px; }
+    .feedback .saved { color: var(--green); }
+    #examples { max-width: 900px; width: 100%; margin: 0 auto; padding: 0 24px 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+    #examples button { font-size: 14px; border: 1px solid var(--teal); background: #fff; color: var(--teal);
+                       border-radius: 16px; padding: 6px 12px; cursor: pointer; }
+    form { display: flex; gap: 10px; padding: 16px 24px 24px; max-width: 900px; width: 100%; margin: 0 auto; }
+    textarea { flex: 1; font: inherit; padding: 10px 12px; border: 1px solid #C4CCD6; border-radius: 8px; resize: none; }
+    form button { font: inherit; background: var(--coral); color: #fff; border: 0; border-radius: 8px; padding: 0 20px; cursor: pointer; }
+    form button:disabled { opacity: 0.5; cursor: default; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Airbnb Assistant</h1>
+    <p>Agent registered in Unity Catalog &middot; model service via Unity Gateway &middot; deployed on Databricks Apps</p>
+  </header>
+  <div id="info-bar" hidden>
+    <span id="agent-pill" class="info-pill" hidden><span class="label">agent:</span> <span id="agent-model"></span></span>
+    <span id="service-pill" class="info-pill" hidden><span class="label">model service:</span> <span id="model-service"></span></span>
+    <a id="mlflow-btn" class="mlflow-btn" target="_blank" rel="noopener" hidden>MLflow Traces</a>
+  </div>
+  <div id="chat"></div>
+  <div id="examples">
+    <button type="button">How many rooms in Mission have a private room?</button>
+    <button type="button">What is the average listing price in Haight Ashbury?</button>
+    <button type="button">How many Entire home/apt listings are in Nob Hill?</button>
+  </div>
+  <form id="form">
+    <textarea id="input" rows="2" placeholder="Ask about San Francisco Airbnb listings..."></textarea>
+    <button id="send" type="submit">Send</button>
+  </form>
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const send = document.getElementById("send");
+    const history = [];  // [{role, content}] replayed on every request
+    // One MLflow session per page load, so a conversation's traces group together
+    const sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now());
+
+    // Agent, model service, and a link to the app's MLflow traces
+    fetch("/api/app-info")
+      .then(r => (r.ok ? r.json() : null))
+      .then(info => {
+        if (!info) return;
+        const show = id => { document.getElementById(id).hidden = false; document.getElementById("info-bar").hidden = false; };
+        if (info.agentModel) {
+          document.getElementById("agent-model").textContent =
+            info.agentModel + (info.agentVersion ? " (version " + info.agentVersion + ")" : "");
+          show("agent-pill");
+        }
+        if (info.modelService) {
+          document.getElementById("model-service").textContent = info.modelService;
+          show("service-pill");
+        }
+        if (info.experimentUrl) {
+          document.getElementById("mlflow-btn").href = info.experimentUrl;
+          show("mlflow-btn");
+        }
+      })
+      .catch(() => {});
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+    }
+
+    // Minimal markdown: paragraphs, bullet lists, **bold**, `code`
+    function renderMarkdown(text) {
+      const inline = s => escapeHtml(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`(.+?)`/g, "<code>$1</code>");
+      return text.split(/\n{2,}/).map(block => {
+        const lines = block.split("\n");
+        if (lines.every(l => /^\s*[-*] /.test(l))) {
+          return "<ul>" + lines.map(l => "<li>" + inline(l.replace(/^\s*[-*] /, "")) + "</li>").join("") + "</ul>";
+        }
+        return "<p>" + lines.map(inline).join("<br>") + "</p>";
+      }).join("");
+    }
+
+    function addMessage(cls, html) {
+      const row = document.createElement("div");
+      row.className = "msg " + cls;
+      row.innerHTML = '<div class="bubble">' + html + "</div>";
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+      return row;
+    }
+
+    // Thumbs up/down and an optional comment, saved to the answer's trace
+    function addFeedback(bubble, traceId) {
+      const box = document.createElement("div");
+      box.className = "feedback";
+      box.innerHTML =
+        '<div class="row">Was this answer correct? ' +
+        '<button type="button" class="choice" data-value="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>Yes</button>' +
+        '<button type="button" class="choice" data-value="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>No</button>' +
+        '<input type="text" placeholder="Optional comment">' +
+        '<button type="button" class="submit">Submit</button></div>' +
+        '<div class="row">Trace: <span class="trace-id">' + escapeHtml(traceId) + '</span> <span class="status"></span></div>';
+      let value = null;
+      const choices = box.querySelectorAll("button[data-value]");
+      choices.forEach(b => b.addEventListener("click", () => {
+        value = b.dataset.value === "true";
+        choices.forEach(o => o.classList.toggle("selected", o === b));
+      }));
+      const status = box.querySelector(".status");
+      box.querySelector(".submit").addEventListener("click", async () => {
+        if (value === null) { status.textContent = "Choose Yes or No first."; return; }
+        const comment = box.querySelector("input").value.trim();
+        try {
+          const res = await fetch("/api/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ trace_id: traceId, value, comment: comment || null }),
+          });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          status.className = "status saved";
+          status.textContent = "Feedback saved to the trace.";
+        } catch (err) {
+          status.className = "status";
+          status.textContent = "Could not save feedback. " + err.message;
+        }
+      });
+      bubble.appendChild(box);
+    }
+
+    async function ask(text) {
+      history.push({ role: "user", content: text });
+      addMessage("user", escapeHtml(text));
+      const pending = addMessage("agent", '<span class="thinking">Thinking...</span>');
+      send.disabled = true;
+      try {
+        const res = await fetch("/invocations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: history, custom_inputs: { session_id: sessionId } }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status + ": " + (await res.text()).slice(0, 300));
+        const data = await res.json();
+        const items = data.output || [];
+        // Tool calls the agent made, shown as chips above the answer
+        const tools = items.filter(i => i.type === "function_call").map(i => i.name.split("__").pop());
+        const answer = items
+          .filter(i => i.type === "message" && i.role === "assistant")
+          .flatMap(i => (i.content || []).map(c => c.text || ""))
+          .join("\n\n");
+        history.push({ role: "assistant", content: answer });
+        const chips = tools.length
+          ? '<div class="tools">' + tools.map(t => '<span class="tool">' + escapeHtml(t) + "</span>").join("") + "</div>"
+          : "";
+        const bubble = pending.querySelector(".bubble");
+        bubble.innerHTML = chips + renderMarkdown(answer || "(no answer)");
+        const traceId = (data.custom_outputs || {}).trace_id;
+        if (traceId) addFeedback(bubble, traceId);
+      } catch (err) {
+        history.pop();
+        pending.className = "msg agent error";
+        pending.querySelector(".bubble").textContent = "Request failed. " + err.message;
+      } finally {
+        send.disabled = false;
+        input.focus();
+      }
+    }
+
+    document.getElementById("form").addEventListener("submit", e => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || send.disabled) return;
+      input.value = "";
+      ask(text);
+    });
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); document.getElementById("form").requestSubmit(); }
+    });
+    document.querySelectorAll("#examples button").forEach(b => b.addEventListener("click", () => {
+      if (!send.disabled) ask(b.textContent);
+    }));
+  </script>
+</body>
+</html>

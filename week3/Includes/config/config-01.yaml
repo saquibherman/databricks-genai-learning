@@ -1,0 +1,44 @@
+# ============================================================
+# Course Setup Configuration (see Includes/_lib/setup_orchestrator.py)
+# Sections left out are skipped.
+# ============================================================
+
+# Set to true for development (enables manifest validation + cleanup)
+dev_mode: false
+
+# Set to true to drop the catalog after setup (requires dev_mode: true)
+resource_cleanup: false
+
+# Course name — must match the 'course' field in manifest.yaml
+course_name: "GenAI Agent Evaluation on Databricks"
+
+# Serverless compute version check (remove to skip check)
+serverless_compute_version: "6"
+
+# Learner catalog: labuser_<user> (non-Vocareum) or the Vocareum user catalog.
+# The shared agent, its tools and data, and the model services live in
+# workspace.agent_eval (created by Workspace-Setup).
+catalog:
+  name: "workspace"   # this repo: use the existing default catalog instead of auto-creating labuser_<user>
+  prefix: "labuser"
+  schema_name: "demo_agent_eval"
+  volume_name: "agent_vol"
+  volume_sources:
+    - "evaluation_datasets"
+
+# Used by: 1.2_Demo_Agent_Setup
+#
+# The demo loads the shared agent (workspace.agent_eval.airbnb@champion) and
+# sends its traces to the learner's own experiment: /Users/<user>/airbnb_experiment
+mlflow:
+  experiment_name: "airbnb_experiment"
+
+libraries:
+  groups:
+    - pyyaml
+    - databricks-sdk
+    - databricks-openai
+    - databricks-mcp
+    - nest-asyncio
+    - databricks-agents
+    - mlflow

@@ -1,0 +1,22 @@
+command: ["uv", "run", "start-server"]
+# Databricks Apps listen on port 8000. The agent server serves both the JSON API
+# (/invocations) and the static chat UI (/).
+
+# Workspace-Setup deploys this app with AppDeployer, which REPLACES this env list
+# at deploy time with the values for the course workspace. The values below only
+# apply to local development.
+env:
+  - name: MLFLOW_TRACKING_URI
+    value: "databricks"
+  - name: MLFLOW_REGISTRY_URI
+    value: "databricks-uc"
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: "experiment"
+  # Registered agent model the app serves (catalog.schema.name) and its alias
+  - name: AGENT_MODEL
+    value: "workspace.agent_eval.airbnb"
+  - name: AGENT_ALIAS
+    value: "champion"
+  # Unity Gateway model service the agent calls (shown in the UI header)
+  - name: MODEL_SERVICE
+    value: "workspace.agent_eval.agent-model"

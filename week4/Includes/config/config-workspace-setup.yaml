@@ -1,0 +1,27 @@
+# Config for the admin-only Workspace-Setup notebook. Workspace-Setup builds
+# the shared course assets itself (see that notebook); it reads its libraries
+# and model services from here.
+
+# Unity Gateway model services in workspace.agent_deployment. Learners, their
+# apps, and the judges call them by name, so to move a service to a new model
+# (for example when a model is deprecated), change only its served_by here and
+# re-run Workspace-Setup. Each served_by is a foundation model in system.ai.
+model_services:
+  agent-model:
+    served_by: "databricks-claude-sonnet-5-5"   # course default: databricks-gpt-6-1-sol (needs ADI Services on Azure)
+    comment: "The model the course agents and apps call"
+  judge-model:
+    served_by: "databricks-claude-haiku-5-5"   # course default: databricks-gpt-6-luna (needs ADI Services on Azure)
+    comment: "The model for the scorers and judges"
+
+# A service's routing can't be changed in place. When served_by no longer
+# matches an existing service, true deletes and recreates the service with the
+# new model; false stops setup with an error instead. Recreating is safe here:
+# access is granted on the schema, so the new service inherits it.
+recreate_model_services_on_drift: true
+
+libraries:
+  groups:
+    - pyyaml
+    - databricks-sdk
+    - databricks-openai

@@ -1,0 +1,46 @@
+# ============================================================
+# Course Setup Configuration
+# ============================================================
+# All sections marked OPTIONAL can be removed entirely to skip
+# that step. Steps are silent when not configured.
+# ============================================================
+
+# Set to true for development (enables manifest validation + cleanup)
+dev_mode: false
+
+# Set to true to drop the catalog after setup (requires dev_mode: true)
+resource_cleanup: false
+
+# Set to true if this course uses the Medallion Lab pattern
+medallion_lab: false
+
+# Course name — must match the 'course' field in manifest.yaml
+course_name: "Deploying and Monitoring Agents on Databricks"
+
+# Serverless compute version check (remove to skip check)
+serverless_compute_version: "6"
+
+# ---- Catalog and Schema (REQUIRED) ----
+catalog:
+  name: "workspace"   # this repo: use the existing default catalog (course default: null = auto-create labuser_<user>)
+  prefix: "labuser"   # Prefix used when auto-creating a catalog outside Vocareum
+  schema_name: "agent_monitoring"
+  volume_name: null   # OPTIONAL — remove or set null to skip volume creation
+
+# ---- SQL Warehouse (OPTIONAL) ----
+# Looked up by name; its ID is returned as env["sql_warehouse_id"].
+# set_tracing_env exports it as MLFLOW_TRACING_SQL_WAREHOUSE_ID, which MLflow
+# needs to write and search traces stored in Unity Catalog.
+sql_warehouse:
+  name: "2x Small Serverless Warehouse"   # this repo: an existing serverless warehouse (Academy labs: "shared_warehouse")
+  set_tracing_env: true
+
+# The demo creates its own experiment, with traces stored in Unity Catalog
+
+# Library groups from Includes/dependencies.toml
+libraries:
+  groups:
+    - pyyaml
+    - databricks-sdk
+    - databricks-openai
+    - mlflow

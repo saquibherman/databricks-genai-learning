@@ -1,0 +1,16 @@
+bundle:
+  name: genai-course
+
+sync:
+  # Course folders are synced to the workspace (week*/ is not git-ignored here,
+  # but keep this so generated files under week*/ still reach the workspace).
+  include:
+    - week*/**
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      # Host comes from this ~/.databrickscfg profile (created with `databricks auth login`)
+      profile: azure-ml

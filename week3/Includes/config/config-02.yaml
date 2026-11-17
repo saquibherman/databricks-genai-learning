@@ -1,0 +1,71 @@
+# ============================================================
+# Course Setup Configuration (see Includes/_lib/setup_orchestrator.py)
+# Sections left out are skipped.
+# ============================================================
+
+# Set to true for development (enables manifest validation + cleanup)
+dev_mode: false
+
+# Set to true to drop the catalog after setup (requires dev_mode: true)
+resource_cleanup: false
+
+# Course name — must match the 'course' field in manifest.yaml
+course_name: "GenAI Agent Evaluation on Databricks"
+
+# Serverless compute version check (remove to skip check)
+serverless_compute_version: "6"
+
+# Learner catalog: labuser_<user> (non-Vocareum) or the Vocareum user catalog.
+# The shared agent, its tools and data, and the model services live in
+# workspace.agent_eval (created by Workspace-Setup).
+catalog:
+  name: "workspace"   # this repo: use the existing default catalog instead of auto-creating labuser_<user>
+  prefix: "labuser"
+  schema_name: "demo_agent_eval"
+  volume_name: "agent_vol"
+  volume_sources:
+    - "evaluation_datasets"
+
+# Used by: 2.2_Demo_Using_MLflow_Built-In_Judges, 2.4 Demo - Guideline Judges
+# with MLflow, and 2.6_Demo_Custom_Judges_with_MLflow
+#
+# The demos evaluate the shared agent (workspace.agent_eval.airbnb@champion) and
+# log runs and traces to the learner's own experiment: /Users/<user>/airbnb_experiment
+mlflow:
+  experiment_name: "airbnb_experiment"
+
+# Judge models: Unity Gateway model services in workspace.agent_eval (created by
+# Workspace-Setup). Not read by _lib; the Classroom-Setup notebooks read this section.
+judges:
+  correctness: "databricks:/workspace.agent_eval.judge-model"
+  safety: "databricks:/workspace.agent_eval.judge-model"
+  guidelines: "databricks:/workspace.agent_eval.judge-model"
+  custom: "databricks:/workspace.agent_eval.custom-judge-model"
+
+  # Instructions for the custom judges in 2.6
+  coherent_instructions: |
+    Evaluate if the response is coherent, maintaining a constant tone
+    and following a clear flow of thoughts/concepts.
+    Question: {{ inputs }}
+    Response: {{ outputs }}
+
+  tool_usage_instructions: |
+    Analyze the {{ trace }} to verify correct tool usage.
+
+    Check that the agent:
+    - Called tools with correct and reasonable parameters
+    - Used tool outputs effectively to generate the final response
+    - Did not make unnecessary or redundant tool calls
+
+    Return "correct" if tool usage was appropriate and effective,
+    "incorrect" if tools were misused or inappropriate tools were selected.
+
+libraries:
+  groups:
+    - pyyaml
+    - databricks-sdk
+    - databricks-openai
+    - databricks-mcp
+    - nest-asyncio
+    - databricks-agents
+    - mlflow
